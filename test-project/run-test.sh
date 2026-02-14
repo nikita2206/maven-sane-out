@@ -78,3 +78,31 @@ if [ "$failed" -ne 0 ]; then
 fi
 
 echo "PASS: quiet mode suppresses stdout, errors on stderr"
+
+# --- Quiet mode via system property test ---
+stdout_sp=$(mktemp)
+stderr_sp=$(mktemp)
+trap 'rm -f "$stdout" "$stderr" "$stdout_q" "$stderr_q" "$stdout_sp" "$stderr_sp"' EXIT
+
+set +e
+MAVEN_OPTS="-javaagent:$JAR" mvn -Dsane.quiet=5 -Dstyle.color=always compile >"$stdout_sp" 2>"$stderr_sp"
+set -e
+
+if [ -s "$stdout_sp" ]; then
+  echo "FAIL: quiet mode (sysprop) stdout should be empty, but got:"
+  cat "$stdout_sp"
+  failed=1
+fi
+
+if ! grep -q 'ERROR' "$stderr_sp"; then
+  echo "FAIL: quiet mode (sysprop) stderr does not contain ERROR"
+  echo "--- stderr ---"
+  cat "$stderr_sp"
+  failed=1
+fi
+
+if [ "$failed" -ne 0 ]; then
+  exit 1
+fi
+
+echo "PASS: quiet mode via -Dsane.quiet=5 with colors"

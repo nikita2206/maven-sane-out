@@ -21,12 +21,18 @@ import java.util.ArrayDeque;
  */
 public class LogRouter {
 
+    // Capture original streams early (in premain, before Maven wraps them).
     private static final PrintStream ORIGINAL_OUT = System.out;
     private static final PrintStream ORIGINAL_ERR = System.err;
-    private static final boolean ROUTE_WARNINGS;
-    private static final String[] EXCLUDE_PATTERNS;
-    private static final boolean QUIET_MODE;
-    private static final int CONTEXT_SIZE;
+
+    // Configuration is loaded lazily on first route() call because Maven
+    // sets -D system properties after the JVM starts (they're program args,
+    // not JVM args), so they aren't visible during premain/static-init.
+    private static volatile boolean configLoaded;
+    private static boolean routeWarnings;
+    private static String[] excludePatterns = new String[0];
+    private static boolean quietMode;
+    private static int contextSize;
 
     private static final ThreadLocal<ArrayDeque<BufferedEntry>> CONTEXT_BUFFER =
             ThreadLocal.withInitial(ArrayDeque::new);
@@ -41,28 +47,30 @@ public class LogRouter {
         }
     }
 
-    static {
-        ROUTE_WARNINGS = config("MAVEN_SANE_OUT_WARNINGS", "sane.warnings") != null;
+    private static void ensureConfigLoaded() {
+        if (configLoaded) return;
+        synchronized (LogRouter.class) {
+            if (configLoaded) return;
 
-        String exclude = config("MAVEN_SANE_OUT_EXCLUDE", "sane.exclude");
-        if (exclude != null && !exclude.isEmpty()) {
-            EXCLUDE_PATTERNS = exclude.split(";");
-        } else {
-            EXCLUDE_PATTERNS = new String[0];
-        }
+            routeWarnings = config("MAVEN_SANE_OUT_WARNINGS", "sane.warnings") != null;
 
-        String quiet = config("MAVEN_SANE_OUT_QUIET", "sane.quiet");
-        if (quiet != null) {
-            QUIET_MODE = true;
-            int size = 0;
-            try {
-                size = Integer.parseInt(quiet);
-            } catch (NumberFormatException ignored) {
+            String exclude = config("MAVEN_SANE_OUT_EXCLUDE", "sane.exclude");
+            if (exclude != null && !exclude.isEmpty()) {
+                excludePatterns = exclude.split(";");
             }
-            CONTEXT_SIZE = Math.max(0, size);
-        } else {
-            QUIET_MODE = false;
-            CONTEXT_SIZE = 0;
+
+            String quiet = config("MAVEN_SANE_OUT_QUIET", "sane.quiet");
+            if (quiet != null) {
+                quietMode = true;
+                int size = 0;
+                try {
+                    size = Integer.parseInt(quiet);
+                } catch (NumberFormatException ignored) {
+                }
+                contextSize = Math.max(0, size);
+            }
+
+            configLoaded = true;
         }
     }
 
@@ -79,10 +87,11 @@ public class LogRouter {
      * Routes the entire message (including throwable) to the right stream.
      */
     public static void route(Object logger, StringBuilder buf, Throwable t) {
+        ensureConfigLoaded();
         String message = buf.toString();
         PrintStream target = chooseStream(message);
 
-        if (QUIET_MODE) {
+        if (quietMode) {
             if (target == ORIGINAL_ERR) {
                 flushContextBuffer(message);
                 ORIGINAL_ERR.println(message);
@@ -104,11 +113,11 @@ public class LogRouter {
     }
 
     private static void addToContextBuffer(String message, Throwable t) {
-        if (CONTEXT_SIZE == 0) {
+        if (contextSize == 0) {
             return;
         }
         ArrayDeque<BufferedEntry> buffer = CONTEXT_BUFFER.get();
-        if (buffer.size() >= CONTEXT_SIZE) {
+        if (buffer.size() >= contextSize) {
             buffer.pollFirst();
         }
         buffer.addLast(new BufferedEntry(message, t));
@@ -135,7 +144,7 @@ public class LogRouter {
 
     private static PrintStream chooseStream(String message) {
         boolean isError = startsWithLevel(message, "ERROR");
-        boolean isWarning = ROUTE_WARNINGS && startsWithLevel(message, "WARNING");
+        boolean isWarning = routeWarnings && startsWithLevel(message, "WARNING");
 
         if ((isError || isWarning) && !isExcluded(message)) {
             return ORIGINAL_ERR;
@@ -147,7 +156,7 @@ public class LogRouter {
         // Strip ANSI codes for pattern matching so patterns work regardless
         // of whether Maven is running with colors
         String plain = stripAnsi(message);
-        for (String pattern : EXCLUDE_PATTERNS) {
+        for (String pattern : excludePatterns) {
             if (!pattern.isEmpty() && plain.contains(pattern)) {
                 return true;
             }
