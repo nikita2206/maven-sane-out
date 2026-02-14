@@ -22,9 +22,11 @@ Sleep 8s
 Enter
 Sleep 1s
 
-# Silently configure the agent
+# Silently configure the agent and clear screen
 Hide
 Type "export MAVEN_OPTS='-Xshare:off -javaagent:target/maven-sane-out-slf4j-1.0-SNAPSHOT.jar'"
+Enter
+Type "clear"
 Enter
 Sleep 200ms
 Show
