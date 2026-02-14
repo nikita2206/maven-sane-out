@@ -55,3 +55,14 @@ mvn compile 2>errors.txt 1>/dev/null
 ## How it works
 
 A Java agent that instruments SLF4J's `SimpleLogger.write()` method using ASM bytecode transformation. At the SLF4J level, each log call (including multiline messages and stack traces) is routed as a single unit to the correct stream based on its level. Works with both SLF4J 1.x and 2.x.
+
+## Why ASM bytecode transformation?
+
+A custom SLF4J provider (replacing SimpleLogger entirely) would avoid the ASM dependency but has significant downsides:
+
+- **Maven ships its own SLF4J provider** (`maven-slf4j-provider`) with custom formatting, ANSI colors, and features like `--fail-on-severity`. A replacement provider must reimplement all of this or lose it.
+- **`SimpleLogger.write()` is package-private**, so it can't be overridden by subclassing. There's no protected hook between message formatting and stream selection — you'd have to reimplement the full logging path.
+- **Classloader boundaries** prevent same-package tricks: the agent runs on the bootstrap classloader while SimpleLogger is loaded by Maven's classloader, making them different runtime packages.
+- **Two SLF4J versions** to support: Maven 3.x uses SLF4J 1.x (StaticLoggerBinder), Maven 4.x uses SLF4J 2.x (ServiceLoader). Each needs a different provider mechanism.
+
+The ASM approach sidesteps all of this — it rewrites one method in the existing logger, preserving Maven's formatting, colors, and all other behavior. ASM is shaded into the JAR, invisible to users, and adds ~125KB.
