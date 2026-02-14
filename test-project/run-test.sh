@@ -50,3 +50,31 @@ if [ "$failed" -ne 0 ]; then
 fi
 
 echo "PASS: [ERROR] lines routed to stderr"
+
+# --- Quiet mode test ---
+stdout_q=$(mktemp)
+stderr_q=$(mktemp)
+trap 'rm -f "$stdout" "$stderr" "$stdout_q" "$stderr_q"' EXIT
+
+set +e
+MAVEN_SANE_OUT_QUIET=5 MAVEN_OPTS="-javaagent:$JAR" mvn -B compile >"$stdout_q" 2>"$stderr_q"
+set -e
+
+if [ -s "$stdout_q" ]; then
+  echo "FAIL: quiet mode stdout should be empty, but got:"
+  cat "$stdout_q"
+  failed=1
+fi
+
+if ! grep -q '\[ERROR\]' "$stderr_q"; then
+  echo "FAIL: quiet mode stderr does not contain [ERROR]"
+  echo "--- stderr ---"
+  cat "$stderr_q"
+  failed=1
+fi
+
+if [ "$failed" -ne 0 ]; then
+  exit 1
+fi
+
+echo "PASS: quiet mode suppresses stdout, errors on stderr"

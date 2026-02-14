@@ -1,6 +1,7 @@
 package io.github.mavensaneout;
 
 import java.io.PrintStream;
+import java.util.ArrayDeque;
 
 /**
  * Called from the instrumented SimpleLogger.write() method.
@@ -11,6 +12,8 @@ import java.io.PrintStream;
  *   MAVEN_SANE_OUT_WARNINGS=1    — also route [WARNING] to stderr (off by default)
  *   MAVEN_SANE_OUT_EXCLUDE=p1;p2 — lines matching any pattern stay on stdout
  *                                   even if they're ERROR/WARNING
+ *   MAVEN_SANE_OUT_QUIET=N       — quiet mode: suppress non-error output, show N
+ *                                   context lines before each error (per-thread)
  */
 public class LogRouter {
 
@@ -18,6 +21,21 @@ public class LogRouter {
     private static final PrintStream ORIGINAL_ERR = System.err;
     private static final boolean ROUTE_WARNINGS;
     private static final String[] EXCLUDE_PATTERNS;
+    private static final boolean QUIET_MODE;
+    private static final int CONTEXT_SIZE;
+
+    private static final ThreadLocal<ArrayDeque<BufferedEntry>> CONTEXT_BUFFER =
+            ThreadLocal.withInitial(ArrayDeque::new);
+
+    private static class BufferedEntry {
+        final String message;
+        final Throwable throwable;
+
+        BufferedEntry(String message, Throwable throwable) {
+            this.message = message;
+            this.throwable = throwable;
+        }
+    }
 
     static {
         ROUTE_WARNINGS = System.getenv("MAVEN_SANE_OUT_WARNINGS") != null;
@@ -27,6 +45,20 @@ public class LogRouter {
             EXCLUDE_PATTERNS = exclude.split(";");
         } else {
             EXCLUDE_PATTERNS = new String[0];
+        }
+
+        String quiet = System.getenv("MAVEN_SANE_OUT_QUIET");
+        if (quiet != null) {
+            QUIET_MODE = true;
+            int size = 0;
+            try {
+                size = Integer.parseInt(quiet);
+            } catch (NumberFormatException ignored) {
+            }
+            CONTEXT_SIZE = Math.max(0, size);
+        } else {
+            QUIET_MODE = false;
+            CONTEXT_SIZE = 0;
         }
     }
 
@@ -38,11 +70,55 @@ public class LogRouter {
         String message = buf.toString();
         PrintStream target = chooseStream(message);
 
+        if (QUIET_MODE) {
+            if (target == ORIGINAL_ERR) {
+                flushContextBuffer(message);
+                ORIGINAL_ERR.println(message);
+                if (t != null) {
+                    t.printStackTrace(ORIGINAL_ERR);
+                }
+                ORIGINAL_ERR.flush();
+            } else {
+                addToContextBuffer(message, t);
+            }
+            return;
+        }
+
         target.println(message);
         if (t != null) {
             t.printStackTrace(target);
         }
         target.flush();
+    }
+
+    private static void addToContextBuffer(String message, Throwable t) {
+        if (CONTEXT_SIZE == 0) {
+            return;
+        }
+        ArrayDeque<BufferedEntry> buffer = CONTEXT_BUFFER.get();
+        if (buffer.size() >= CONTEXT_SIZE) {
+            buffer.pollFirst();
+        }
+        buffer.addLast(new BufferedEntry(message, t));
+    }
+
+    private static void flushContextBuffer(String errorMessage) {
+        ArrayDeque<BufferedEntry> buffer = CONTEXT_BUFFER.get();
+        if (buffer.isEmpty()) {
+            return;
+        }
+        boolean useAnsi = errorMessage.indexOf('\u001B') >= 0;
+        for (BufferedEntry entry : buffer) {
+            if (useAnsi) {
+                ORIGINAL_ERR.println("\u001B[0;37m" + entry.message + "\u001B[0m");
+            } else {
+                ORIGINAL_ERR.println(entry.message);
+            }
+            if (entry.throwable != null) {
+                entry.throwable.printStackTrace(ORIGINAL_ERR);
+            }
+        }
+        buffer.clear();
     }
 
     private static PrintStream chooseStream(String message) {

@@ -38,6 +38,7 @@ All via environment variables:
 | `MAVEN_SANE_OUT_DISABLE=1` | Bypass the agent entirely |
 | `MAVEN_SANE_OUT_WARNINGS=1` | Also route `[WARNING]` to stderr |
 | `MAVEN_SANE_OUT_EXCLUDE=pat1;pat2` | Lines matching any pattern stay on stdout even if ERROR/WARNING |
+| `MAVEN_SANE_OUT_QUIET=N` | Quiet mode: suppress all non-error output, show N context lines before each error (per-thread) |
 
 ### Examples
 
@@ -50,6 +51,12 @@ MAVEN_SANE_OUT_WARNINGS=1 MAVEN_SANE_OUT_EXCLUDE="bootstrap class path;obsolete"
 
 # Capture just errors
 mvn compile 2>errors.txt 1>/dev/null
+
+# Quiet mode: only errors on stderr, with 10 lines of context
+MAVEN_SANE_OUT_QUIET=10 mvn compile
+
+# Quiet mode: errors only, no context
+MAVEN_SANE_OUT_QUIET=0 mvn compile
 ```
 
 ## How it works

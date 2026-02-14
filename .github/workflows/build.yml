@@ -6,6 +6,7 @@ on:
     tags: ['v*']
   pull_request:
     branches: [master]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -35,6 +36,9 @@ jobs:
 
       - name: Integration test
         run: bash test-project/run-test.sh
+
+      - name: Parallel build integration test
+        run: bash test-project-parallel/run-test.sh
 
       - uses: actions/upload-artifact@v4
         if: matrix.java == '11' && matrix.maven == '3.9.9'
