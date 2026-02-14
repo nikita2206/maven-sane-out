@@ -2,15 +2,7 @@
 
 Routes Maven `[ERROR]` lines to stderr. Everything else stays on stdout.
 
-```bash
-# errors on stdout (default Maven behavior)
-mvn compile 2>/dev/null
-[ERROR] Failed to execute goal...  # still visible
-
-# errors on stderr (with maven-sane-out)
-mvn compile 2>/dev/null
-                                   # errors gone — they went to stderr
-```
+![demo](demo.gif)
 
 ## Install
 
