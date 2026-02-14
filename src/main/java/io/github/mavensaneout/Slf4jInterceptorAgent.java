@@ -8,7 +8,8 @@ import java.util.jar.JarFile;
 public class Slf4jInterceptorAgent {
 
     public static void premain(String agentArgs, Instrumentation inst) {
-        if (System.getenv("MAVEN_SANE_OUT_DISABLE") != null) {
+        if (System.getenv("MAVEN_SANE_OUT_DISABLE") != null
+                || System.getProperty("sane.disable") != null) {
             return;
         }
 

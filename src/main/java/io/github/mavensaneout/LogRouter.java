@@ -8,12 +8,16 @@ import java.util.ArrayDeque;
  * Routes log output to stdout or stderr based on the log level
  * detected in the formatted message.
  *
- * Configuration via environment variables:
- *   MAVEN_SANE_OUT_WARNINGS=1    — also route [WARNING] to stderr (off by default)
- *   MAVEN_SANE_OUT_EXCLUDE=p1;p2 — lines matching any pattern stay on stdout
- *                                   even if they're ERROR/WARNING
- *   MAVEN_SANE_OUT_QUIET=N       — quiet mode: suppress non-error output, show N
- *                                   context lines before each error (per-thread)
+ * Configuration via environment variables or system properties (-D):
+ *   MAVEN_SANE_OUT_WARNINGS=1  / -Dsane.warnings    — also route [WARNING] to stderr
+ *   MAVEN_SANE_OUT_EXCLUDE=p;p / -Dsane.exclude=p;p — lines matching any pattern stay
+ *                                                       on stdout even if ERROR/WARNING
+ *   MAVEN_SANE_OUT_QUIET=N     / -Dsane.quiet=N     — quiet mode: suppress non-error
+ *                                                       output, show N context lines
+ *                                                       before each error (per-thread)
+ *   MAVEN_SANE_OUT_DISABLE     / -Dsane.disable      — disable the agent entirely
+ *
+ * System properties take precedence over environment variables.
  */
 public class LogRouter {
 
@@ -38,16 +42,16 @@ public class LogRouter {
     }
 
     static {
-        ROUTE_WARNINGS = System.getenv("MAVEN_SANE_OUT_WARNINGS") != null;
+        ROUTE_WARNINGS = config("MAVEN_SANE_OUT_WARNINGS", "sane.warnings") != null;
 
-        String exclude = System.getenv("MAVEN_SANE_OUT_EXCLUDE");
+        String exclude = config("MAVEN_SANE_OUT_EXCLUDE", "sane.exclude");
         if (exclude != null && !exclude.isEmpty()) {
             EXCLUDE_PATTERNS = exclude.split(";");
         } else {
             EXCLUDE_PATTERNS = new String[0];
         }
 
-        String quiet = System.getenv("MAVEN_SANE_OUT_QUIET");
+        String quiet = config("MAVEN_SANE_OUT_QUIET", "sane.quiet");
         if (quiet != null) {
             QUIET_MODE = true;
             int size = 0;
@@ -60,6 +64,14 @@ public class LogRouter {
             QUIET_MODE = false;
             CONTEXT_SIZE = 0;
         }
+    }
+
+    /**
+     * Returns the system property if set, otherwise falls back to the environment variable.
+     */
+    private static String config(String envVar, String sysProp) {
+        String value = System.getProperty(sysProp);
+        return value != null ? value : System.getenv(envVar);
     }
 
     /**
