@@ -15,7 +15,7 @@ Type "# Standard Maven — errors buried in noisy output"
 Enter
 Sleep 1s
 
-Type "mvn -B -f test-project compile 2>/dev/null"
+Type "mvn -f test-project compile"
 Enter
 Sleep 8s
 
@@ -35,7 +35,7 @@ Type "# With maven-sane-out quiet mode — just the errors"
 Enter
 Sleep 1s
 
-Type "mvn -Dsane.quiet=5 -B -f test-project compile 1>/dev/null"
+Type "mvn -Dsane.quiet=5 -f test-project compile"
 Enter
 Sleep 8s
 
