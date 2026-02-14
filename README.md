@@ -14,16 +14,11 @@ mvn compile 2>/dev/null
 
 ## Install
 
-Build the agent:
+Download the latest release:
 
 ```bash
-mvn -f slf4j-interceptor/pom.xml package
-```
-
-Copy the JAR somewhere persistent:
-
-```bash
-cp slf4j-interceptor/target/maven-sane-out-slf4j-1.0-SNAPSHOT.jar ~/.mvn/maven-sane-out.jar
+curl -sL https://github.com/nikita2206/maven-sane-out/releases/latest/download/maven-sane-out.jar \
+  -o ~/.mvn/maven-sane-out.jar
 ```
 
 Add to `~/.mavenrc`:
@@ -59,4 +54,4 @@ mvn compile 2>errors.txt 1>/dev/null
 
 ## How it works
 
-A Java agent that instruments SLF4J's `SimpleLogger.write()` method using ASM bytecode transformation. At the SLF4J level, each log call (including multiline messages and stack traces) is routed as a single unit to the correct stream based on its level.
+A Java agent that instruments SLF4J's `SimpleLogger.write()` method using ASM bytecode transformation. At the SLF4J level, each log call (including multiline messages and stack traces) is routed as a single unit to the correct stream based on its level. Works with both SLF4J 1.x and 2.x.
