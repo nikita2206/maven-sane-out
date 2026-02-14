@@ -23,6 +23,16 @@ public class Slf4jInterceptorAgent {
             System.err.println("[maven-sane-out] Failed to add agent to bootstrap classpath: " + e);
         }
 
+        // Force LogRouter to initialize now (on the bootstrap classloader)
+        // so it captures the real System.out/err before Maven wraps them.
+        // Maven 4 wraps stderr and routes it back through SLF4J, which would
+        // cause infinite recursion if LogRouter captured the wrapped streams.
+        try {
+            Class.forName("io.github.mavensaneout.LogRouter", true, null);
+        } catch (ClassNotFoundException e) {
+            System.err.println("[maven-sane-out] Failed to initialize LogRouter: " + e);
+        }
+
         inst.addTransformer(new SimpleLoggerTransformer());
     }
 }

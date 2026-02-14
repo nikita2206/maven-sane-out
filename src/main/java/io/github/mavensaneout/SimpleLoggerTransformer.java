@@ -20,12 +20,16 @@ public class SimpleLoggerTransformer implements ClassFileTransformer {
 
     private static final String SIMPLE_LOGGER = "org/slf4j/impl/SimpleLogger";
     private static final String SIMPLE_LOGGER_ALT = "org/slf4j/simple/SimpleLogger";
+    // Maven 4 copies SimpleLogger into its own class hierarchy
+    private static final String MAVEN_SIMPLE_LOGGER = "org/apache/maven/slf4j/MavenSimpleLogger";
 
     @Override
     public byte[] transform(ClassLoader loader, String className,
             Class<?> classBeingRedefined, ProtectionDomain protectionDomain,
             byte[] classfileBuffer) {
-        if (!SIMPLE_LOGGER.equals(className) && !SIMPLE_LOGGER_ALT.equals(className)) {
+        if (!SIMPLE_LOGGER.equals(className)
+                && !SIMPLE_LOGGER_ALT.equals(className)
+                && !MAVEN_SIMPLE_LOGGER.equals(className)) {
             return null;
         }
 
