@@ -1,4 +1,4 @@
-package io.github.mavensaneout;
+package io.nikitwentytwo.mavensaneout;
 
 import java.io.PrintStream;
 import java.util.ArrayDeque;

@@ -1,4 +1,4 @@
-package io.github.mavensaneout;
+package io.nikitwentytwo.mavensaneout;
 
 import java.io.File;
 import java.lang.instrument.Instrumentation;
@@ -29,7 +29,7 @@ public class Slf4jInterceptorAgent {
         // Maven 4 wraps stderr and routes it back through SLF4J, which would
         // cause infinite recursion if LogRouter captured the wrapped streams.
         try {
-            Class.forName("io.github.mavensaneout.LogRouter", true, null);
+            Class.forName("io.nikitwentytwo.mavensaneout.LogRouter", true, null);
         } catch (ClassNotFoundException e) {
             System.err.println("[maven-sane-out] Failed to initialize LogRouter: " + e);
         }

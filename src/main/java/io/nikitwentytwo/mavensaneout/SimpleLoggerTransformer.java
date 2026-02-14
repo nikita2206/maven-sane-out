@@ -1,4 +1,4 @@
-package io.github.mavensaneout;
+package io.nikitwentytwo.mavensaneout;
 
 import org.objectweb.asm.*;
 
@@ -63,7 +63,7 @@ public class SimpleLoggerTransformer implements ClassFileTransformer {
                     mv.visitVarInsn(Opcodes.ALOAD, 2);
                     mv.visitMethodInsn(
                             Opcodes.INVOKESTATIC,
-                            "io/github/mavensaneout/LogRouter",
+                            "io/nikitwentytwo/mavensaneout/LogRouter",
                             "route",
                             "(Ljava/lang/Object;Ljava/lang/StringBuilder;Ljava/lang/Throwable;)V",
                             false);
