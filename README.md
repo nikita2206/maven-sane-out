@@ -31,14 +31,14 @@ Done. All `mvn` invocations now route `[ERROR]` to stderr.
 
 ## Configuration
 
-All via environment variables:
+Via environment variables or system properties (`-D` flags). System properties take precedence.
 
-| Variable | Effect |
-|---|---|
-| `MAVEN_SANE_OUT_DISABLE=1` | Bypass the agent entirely |
-| `MAVEN_SANE_OUT_WARNINGS=1` | Also route `[WARNING]` to stderr |
-| `MAVEN_SANE_OUT_EXCLUDE=pat1;pat2` | Lines matching any pattern stay on stdout even if ERROR/WARNING |
-| `MAVEN_SANE_OUT_QUIET=N` | Quiet mode: suppress all non-error output, show N context lines before each error (per-thread) |
+| Environment Variable | System Property | Effect |
+|---|---|---|
+| `MAVEN_SANE_OUT_DISABLE=1` | `-Dsane.disable` | Bypass the agent entirely |
+| `MAVEN_SANE_OUT_WARNINGS=1` | `-Dsane.warnings` | Also route `[WARNING]` to stderr |
+| `MAVEN_SANE_OUT_EXCLUDE=pat1;pat2` | `-Dsane.exclude=pat1;pat2` | Lines matching any pattern stay on stdout even if ERROR/WARNING |
+| `MAVEN_SANE_OUT_QUIET=N` | `-Dsane.quiet=N` | Quiet mode: suppress all non-error output, show N context lines before each error (per-thread) |
 
 ### Examples
 
@@ -54,6 +54,8 @@ mvn compile 2>errors.txt 1>/dev/null
 
 # Quiet mode: only errors on stderr, with 10 lines of context
 MAVEN_SANE_OUT_QUIET=10 mvn compile
+# or equivalently:
+mvn -Dsane.quiet=10 compile
 
 # Quiet mode: errors only, no context
 MAVEN_SANE_OUT_QUIET=0 mvn compile
